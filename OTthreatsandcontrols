@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RiskQ — OT Threat × Controls Matrix</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#1D9E75;--green-dk:#0F6E56;--green-lt:#E1F5EE;--green-bd:#9FE1CB;
+  --red:#E24B4A;--red-lt:#FCEBEB;--red-dk:#A32D2D;
+  --amber:#BA7517;--amber-lt:#FAEEDA;--amber-dk:#854F0B;
+  --blue:#185FA5;--blue-lt:#E6F1FB;--blue-bd:#B5D4F4;
+  --purple:#534AB7;--purple-lt:#EEEDFE;--purple-dk:#3C3489;
+  --bg:#F7F7F5;--surface:#fff;
+  --text:#1A1A18;--muted:#6B6A65;--faint:#B4B2A9;
+  --border:rgba(0,0,0,0.1);--radius:10px;--radius-sm:6px
+}
+body{font-family:-apple-system,"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+.app{max-width:1100px;margin:0 auto;padding:24px 20px}
+
+/* header */
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:12px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-mark{width:36px;height:36px;background:var(--green);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.logo-mark svg{width:20px;height:20px}
+.logo-name{font-size:20px;font-weight:600;letter-spacing:-.4px}
+.logo-tag{font-size:12px;color:var(--muted)}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.badge{font-size:11px;padding:4px 10px;border-radius:20px;font-weight:500}
+.badge-green{background:var(--green-lt);color:var(--green-dk);border:1px solid var(--green-bd)}
+.badge-count{background:var(--red-lt);color:var(--red-dk);border:1px solid #F7C1C1}
+
+/* tabs */
+.tabs{display:flex;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:4px;margin-bottom:18px;width:fit-content}
+.tab{font-size:13px;padding:7px 16px;cursor:pointer;border-radius:7px;background:none;border:none;color:var(--muted);transition:all .15s;font-weight:400;white-space:nowrap}
+.tab.active{background:var(--green);color:#fff;font-weight:500}
+.tab:hover:not(.active){background:var(--bg);color:var(--text)}
+
+/* sections */
+.sec{display:none}.sec.active{display:block}
+
+/* summary cards */
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:20px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+.stat-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:4px}
+.stat-val{font-size:26px;font-weight:700}
+.stat-val.red{color:var(--red)}.stat-val.amber{color:var(--amber)}.stat-val.green{color:var(--green)}.stat-val.blue{color:var(--blue)}.stat-val.purple{color:var(--purple)}
+
+/* filters */
+.filter-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.filter-bar label{font-size:12px;color:var(--muted)}
+.filter-bar select{font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text)}
+.search-input{font-size:12px;padding:5px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);width:180px}
+.search-input:focus,.filter-bar select:focus{outline:none;border-color:var(--green)}
+
+/* threat cards */
+.threat-grid{display:flex;flex-direction:column;gap:10px}
+.threat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border .15s}
+.threat-card:hover{border-color:var(--green)}
+.threat-head{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;user-select:none}
+.threat-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.threat-meta{flex:1;min-width:0}
+.threat-name{font-size:14px;font-weight:600;color:var(--text)}
+.threat-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.threat-badges{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pill{display:inline-block;font-size:11px;padding:3px 8px;border-radius:20px;font-weight:600;white-space:nowrap}
+.pill-crit{background:var(--red-lt);color:var(--red-dk)}
+.pill-high{background:var(--amber-lt);color:var(--amber-dk)}
+.pill-med{background:var(--green-lt);color:var(--green-dk)}
+.pill-low{background:var(--blue-lt);color:var(--blue)}
+.pill-cat{background:#F1EFE8;color:#444441}
+.expand-icon{font-size:18px;color:var(--faint);transition:transform .2s;flex-shrink:0}
+.threat-card.open .expand-icon{transform:rotate(180deg)}
+
+.threat-body{display:none;border-top:1px solid var(--border);padding:16px}
+.threat-card.open .threat-body{display:block}
+.body-desc{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:14px}
+.body-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:600px){.body-cols{grid-template-columns:1fr}}
+.col-head{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.col-head.red{color:var(--red-dk)}
+.col-head.green{color:var(--green-dk)}
+.ctrl-list{list-style:none;display:flex;flex-direction:column;gap:6px}
+.ctrl-item{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--text);line-height:1.45}
+.ctrl-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.ctrl-dot.green{background:var(--green)}
+.ctrl-dot.blue{background:var(--blue)}
+.ctrl-dot.amber{background:var(--amber)}
+.framework-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+.fw-badge{font-size:10px;padding:3px 7px;border-radius:4px;font-weight:600}
+.fw-nist{background:#E6F1FB;color:#185FA5}
+.fw-iec{background:#EEEDFE;color:#3C3489}
+.fw-cisa{background:var(--green-lt);color:var(--green-dk)}
+.fw-mitre{background:var(--red-lt);color:var(--red-dk)}
+
+/* matrix view */
+.matrix-scroll{overflow-x:auto;margin-bottom:20px}
+.matrix-tbl{border-collapse:collapse;min-width:700px;width:100%}
+.matrix-tbl th{font-size:11px;font-weight:600;padding:8px 10px;text-align:left;background:var(--bg);border:1px solid var(--border);color:var(--muted);white-space:nowrap}
+.matrix-tbl td{padding:9px 10px;border:1px solid var(--border);font-size:12px;vertical-align:top}
+.matrix-tbl tr:hover td{background:#F5F5F2}
+.dot-cell{display:flex;gap:4px;flex-wrap:wrap}
+.ctrl-dot-sm{width:10px;height:10px;border-radius:50%;display:inline-block;cursor:default}
+.ctrl-dot-sm.has{background:var(--green)}
+.ctrl-dot-sm.none{background:#E0DFDB}
+
+/* legend */
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.legend-dot{width:10px;height:10px;border-radius:50%}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="hdr">
+  <div class="logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 20 20" fill="none"><path d="M10 2L17 6V14L10 18L3 14V6L10 2Z" stroke="white" stroke-width="1.5"/><circle cx="10" cy="10" r="3" fill="white"/></svg>
+    </div>
+    <div><div class="logo-name">RiskQ</div><div class="logo-tag">OT Threat × Controls Matrix</div></div>
+  </div>
+  <div class="hdr-right">
+    <span class="badge badge-count" id="threat-count-badge">22 threats</span>
+    <span class="badge badge-green">NIST 800-82 · IEC 62443 · MITRE ATT&CK ICS</span>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('threats',this)">Threats &amp; controls</button>
+  <button class="tab" onclick="showTab('matrix',this)">Mapping matrix</button>
+  <button class="tab" onclick="showTab('controls',this)">Controls library</button>
+</div>
+
+<!-- THREATS & CONTROLS -->
+<div id="threats" class="sec active">
+  <div class="stat-row" id="stat-row"></div>
+  <div class="filter-bar">
+    <label>Filter:</label>
+    <select id="f-cat" onchange="renderThreats()"><option value="">All categories</option></select>
+    <select id="f-sev" onchange="renderThreats()"><option value="">All severities</option><option>Critical</option><option>High</option><option>Medium</option><option>Low</option></select>
+    <select id="f-zone" onchange="renderThreats()"><option value="">All OT zones</option></select>
+    <input class="search-input" id="f-search" placeholder="Search threats..." oninput="renderThreats()">
+  </div>
+  <div class="threat-grid" id="threat-grid"></div>
+</div>
+
+<!-- MATRIX -->
+<div id="matrix" class="sec">
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Control applies</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#E0DFDB"></div>Not applicable</div>
+  </div>
+  <div class="matrix-scroll"><table class="matrix-tbl" id="matrix-tbl"></table></div>
+</div>
+
+<!-- CONTROLS LIBRARY -->
+<div id="controls" class="sec">
+  <div class="filter-bar">
+    <label>Category:</label>
+    <select id="fc-cat" onchange="renderControls()"><option value="">All categories</option></select>
+    <input class="search-input" id="fc-search" placeholder="Search controls..." oninput="renderControls()">
+  </div>
+  <div id="controls-grid"></div>
+</div>
+
+</div>
+
+<script>
+const THREATS = [
+  {
+    id:"T01", name:"Ransomware targeting OT/ICS",
+    cat:"Malware", sev:"Critical", zone:["Control","Network","Field"],
+    icon:"🔒", color:"#FCEBEB",
+    desc:"Ransomware groups encrypt HMIs, SCADA servers, and engineering workstations, forcing operational shutdowns. Manufacturing sector attacks rose 87% YoY in 2024. Groups like BlackBasta and LockBit specifically target OT environments for maximum extortion leverage.",
+    ttps:["IT network lateral movement to OT","Encrypted PLC logic / HMI screens","Double-extortion: encrypt + exfiltrate","Targeting production windows for max impact"],
+    controls:["OT network segmentation (Purdue model / DMZ)","Offline, tested backups of PLC logic and configs","OT-specific endpoint protection on HMIs","Application allowlisting on engineering workstations","Immutable OT backup repositories","Incident response plan with OT-specific runbooks","Network anomaly detection (passive NDR)","Disable unnecessary services on OT servers"],
+    frameworks:["NIST 800-82 §6.2","IEC 62443-3-3 FR7","MITRE ATT&CK ICS T0849","CISA #StopRansomware"]
+  },
+  {
+    id:"T02", name:"Nation-state / APT intrusion",
+    cat:"Advanced Persistent Threat", sev:"Critical", zone:["Control","Network","Safety"],
+    icon:"🎯", color:"#FCEBEB",
+    desc:"State-sponsored groups (China's Volt Typhoon, Russia's Sandworm, Iran-affiliated actors) conduct long-duration campaigns targeting critical infrastructure. Living-off-the-land (LOTL) tactics use legitimate OT tools to avoid detection. Goal: sabotage, espionage, or pre-positioning for future disruption.",
+    ttps:["LOTL using native ICS protocols","Long dwell time before activation","ICS-aware toolkits (FrostyGoop, PIPEDREAM)","Credential harvesting and lateral movement"],
+    controls:["OT threat intelligence feeds (sector ISACs)","Passive network monitoring with OT-protocol visibility","Zero Trust architecture for OT access","Privileged access management (PAM) for OT","Behavioural anomaly detection (baselining)","IT/OT separation with unidirectional gateways","Regular threat hunting in OT environments","Cross-sector information sharing"],
+    frameworks:["NIST 800-82 §5","IEC 62443-3-2","MITRE ATT&CK ICS T0817","CISA AA24-038A"]
+  },
+  {
+    id:"T03", name:"Phishing / spear-phishing into OT",
+    cat:"Social Engineering", sev:"High", zone:["Network","Control"],
+    icon:"🎣", color:"#FAEEDA",
+    desc:"Targeted phishing emails compromise operator or engineer credentials, providing initial IT access that pivots to OT. 68% of breaches involve human elements. OT engineers are high-value targets due to their privileged access to control systems.",
+    ttps:["Credential harvesting via fake OT vendor portals","Malicious attachments exploiting engineering software","Business email compromise targeting OT procurement","Watering hole attacks on OT vendor sites"],
+    controls:["Security awareness training specific to OT staff","Email filtering with sandboxing","MFA for all remote and privileged OT access","Phishing-resistant MFA (FIDO2) for critical systems","Separate email domain for OT engineering staff","Inbound attachment blocking for OT jump servers","Simulated phishing exercises for OT personnel"],
+    frameworks:["NIST 800-82 §6.2.2","IEC 62443-2-1","MITRE ATT&CK ICS T0865","NIST CSF PR.AT"]
+  },
+  {
+    id:"T04", name:"Insecure remote access",
+    cat:"Access & Authentication", sev:"Critical", zone:["Network","Control","Field"],
+    icon:"🔓", color:"#FCEBEB",
+    desc:"Remote access solutions (VPNs, RDP, vendor portals) are the most common OT attack entry point. 75% of OT organisations use MFA for remote access — meaning 25% remain exposed. The Change Healthcare breach originated from an MFA-less remote access portal.",
+    ttps:["Exploitation of unpatched VPN appliances","Brute-force on exposed RDP ports","Credential stuffing from IT credential leaks","Abuse of legitimate vendor remote sessions"],
+    controls:["Mandatory MFA for all OT remote access","Zero Trust Network Access (ZTNA) replacing legacy VPN","Jump servers / bastion hosts for OT access","Vendor access time-limited and session-recorded","Endpoint compliance checks before OT connection","Remove direct internet-facing OT access","Privileged Access Workstations (PAW) for OT","Regular remote access audit and review"],
+    frameworks:["NIST 800-82 §6.2.4","IEC 62443-3-3 FR1","MITRE ATT&CK ICS T0822","CISA Known Exploited Vulns"]
+  },
+  {
+    id:"T05", name:"IT/OT network lateral movement",
+    cat:"Network", sev:"Critical", zone:["Network","Control"],
+    icon:"🌐", color:"#FCEBEB",
+    desc:"75% of OT attacks begin as IT breaches. Flat or poorly segmented networks allow attackers to move freely from enterprise IT into OT environments. Ransomware and APT groups exploit this convergence to reach ICS assets.",
+    ttps:["Pivot from IT network via shared credentials","Exploitation of IT-OT bridging protocols","Pass-the-hash attacks across segment boundaries","Abuse of historian or data diode misconfigurations"],
+    controls:["Purdue Model / ISA-99 network segmentation","Demilitarised zone (DMZ) between IT and OT","Unidirectional gateways for data flows to IT","No direct IT-to-OT connections — enforce via firewall policy","Network traffic whitelisting in OT zones","OT intrusion detection system (IDS)","Segment OT by criticality: Safety > Control > Field","Regular network architecture review"],
+    frameworks:["NIST 800-82 §5.3","IEC 62443-3-2 Zones & Conduits","MITRE ATT&CK ICS T0812","NERC CIP-005"]
+  },
+  {
+    id:"T06", name:"Unpatched / legacy OT systems",
+    cat:"Vulnerability Management", sev:"High", zone:["Control","Field","Safety"],
+    icon:"🛠", color:"#FAEEDA",
+    desc:"OT system lifespans exceed 20 years. Many run end-of-life OS (Windows XP, Server 2003). Patching is operationally constrained — production shutdowns are required to patch PLCs or SCADA servers. This creates large inventories of known, exploitable vulnerabilities.",
+    ttps:["Exploitation of publicly disclosed CVEs","Zero-day exploitation of legacy ICS protocols","Targeting unpatched VPN/firewall appliances","Firmware attacks on PLC/RTU devices"],
+    controls:["OT-specific vulnerability management programme","Compensating controls for unpatchable systems (network isolation)","Virtual patching via IDS/IPS signatures","Maintain OT asset inventory with firmware versions","Scheduled maintenance windows for patching","ICS-CERT / CISA advisory monitoring","Vendor firmware integrity verification","Legacy system risk acceptance with documented mitigations"],
+    frameworks:["NIST 800-82 §6.2.3","IEC 62443-4-2","CISA CVSS Prioritisation","MITRE ATT&CK ICS T0862"]
+  },
+  {
+    id:"T07", name:"Default or weak credentials on OT devices",
+    cat:"Access & Authentication", sev:"High", zone:["Field","Control"],
+    icon:"🔑", color:"#FAEEDA",
+    desc:"PLCs, RTUs, HMIs, and network switches are frequently deployed with default manufacturer credentials. Many operators never change them. Iran-affiliated and pro-Russia actors have specifically exploited default credentials on ICS devices in water, food, and healthcare sectors.",
+    ttps:["Automated scanning for default credentials","Brute force on ICS web interfaces","Credential spraying using vendor default lists","Exploitation of shared service accounts"],
+    controls:["Credential audit and rotation on all OT devices","Prohibit default credentials — enforce in procurement policy","Password vault / PAM solution for OT credentials","Unique, complex passwords for each OT device","Disable unnecessary accounts and services","Network-based device authentication where possible","Vendor security requirements in procurement contracts","Regular credential hygiene audits"],
+    frameworks:["NIST 800-82 §6.2.4","IEC 62443-3-3 FR1","CISA ICS Advisory","MITRE ATT&CK ICS T0811"]
+  },
+  {
+    id:"T08", name:"Supply chain compromise",
+    cat:"Supply Chain", sev:"High", zone:["Control","Field","Network"],
+    icon:"📦", color:"#FAEEDA",
+    desc:"OT components sourced from third-party vendors may contain embedded malware, counterfeit hardware, or backdoors. Software updates from ICS vendors have been weaponised. The interdependency between OT systems and cloud-hosted services (scheduling, billing, control logic) creates indirect attack paths.",
+    ttps:["Trojanised vendor software updates","Counterfeit hardware with embedded firmware backdoors","Compromise of managed service providers (MSPs)","Malicious code in third-party OT components"],
+    controls:["Software Bill of Materials (SBOM) for OT components","Approved supplier list with security vetting","Hardware integrity verification on receipt","Air-gapped staging environment for vendor updates","ICS software update integrity checking (code signing)","Third-party risk assessments for OT vendors","Contract security requirements for OT suppliers","Monitor vendor patch advisories continuously"],
+    frameworks:["NIST 800-82 §4.4","IEC 62443-2-4","MITRE ATT&CK ICS T0862","CISA Supply Chain Risk Management"]
+  },
+  {
+    id:"T09", name:"Insider threat",
+    cat:"Insider Threat", sev:"High", zone:["Control","Safety","Field"],
+    icon:"👤", color:"#FAEEDA",
+    desc:"Malicious or negligent insiders with physical and logical access to OT systems represent a significant risk. OT insiders often have persistent, broad access to safety instrumented systems and control networks. 68% of breaches involve human elements (Verizon DBIR 2024).",
+    ttps:["Unauthorised configuration changes to PLCs","Sabotage of safety functions","Data exfiltration of OT schematics / network diagrams","Intentional introduction of malware via USB"],
+    controls:["Role-based access control (RBAC) for OT systems","Least-privilege access principle","Dual authorisation for safety system changes","USB port controls and removable media policy","OT user activity monitoring and logging","Regular access rights review and recertification","Background checks for OT-privileged staff","Separation of duties for critical OT functions"],
+    frameworks:["NIST 800-82 §6.2.4","IEC 62443-3-3 FR2","MITRE ATT&CK ICS T0819","NIST CSF PR.AC"]
+  },
+  {
+    id:"T10", name:"OT-specific malware (ICS malware)",
+    cat:"Malware", sev:"Critical", zone:["Control","Safety","Field"],
+    icon:"☣️", color:"#FCEBEB",
+    desc:"Bespoke malware designed to manipulate industrial processes: Stuxnet, TRITON/TRISIS (targeting Safety Instrumented Systems), FrostyGoop (Modbus exploitation), PIPEDREAM/INCONTROLLER. Three new ICS-specific malware strains were discovered in 2024 — half the total discovered in the previous 14 years combined.",
+    ttps:["Direct manipulation of PLC ladder logic","Targeting of Safety Instrumented Systems (SIS)","Exploitation of native ICS protocols (Modbus, DNP3, EtherNet/IP)","Process historian poisoning"],
+    controls:["OT-specific endpoint detection (Dragos, Claroty, Nozomi)","Baseline process value monitoring (Level 0 sensors)","Integrity monitoring of PLC logic and configuration","Application allowlisting on OT workstations","Safety system isolation and air-gapping","ICS network protocol anomaly detection","Out-of-band process value verification","Regular backup and integrity check of PLC programs"],
+    frameworks:["NIST 800-82 §5.2","IEC 62443-3-3 FR3","MITRE ATT&CK ICS T0821","CISA ICS-CERT AA22-103A"]
+  },
+  {
+    id:"T11", name:"Denial of Service (DoS) on OT",
+    cat:"Availability", sev:"High", zone:["Network","Control","Field"],
+    icon:"⛔", color:"#FAEEDA",
+    desc:"DoS attacks targeting OT networks can disrupt time-sensitive control communications, causing process instability or unsafe conditions. OT protocols like Modbus, DNP3, and EtherNet/IP were not designed with DoS resilience in mind. Even IT-side DoS can cascade to OT through shared infrastructure.",
+    ttps:["Flooding OT network with malformed ICS protocol packets","DDoS on OT-connected cloud services","Exploitation of OT protocol weaknesses","Disruption of historian/SCADA database services"],
+    controls:["Bandwidth limiting and QoS on OT networks","OT network monitoring for traffic anomalies","Redundant control paths (ring topology, failover)","Protocol-aware firewalls for ICS traffic","Segregate OT from internet-connected systems","OT systems resilience testing (tabletop exercises)","Rate limiting on engineering access interfaces","Disaster recovery / manual override procedures"],
+    frameworks:["NIST 800-82 §5.3","IEC 62443-3-3 FR4","MITRE ATT&CK ICS T0814","NERC CIP-007"]
+  },
+  {
+    id:"T12", name:"Exploitation of internet-facing OT assets",
+    cat:"Vulnerability Management", sev:"Critical", zone:["Network","Field"],
+    icon:"🌍", color:"#FCEBEB",
+    desc:"Internet-exposed OT devices (PLCs, HMIs, remote access portals) are actively scanned and exploited. Shodan exposes tens of thousands of internet-facing ICS devices globally. Exploitation within hours of CVE disclosure is documented for perimeter appliances.",
+    ttps:["Shodan/Censys scanning for exposed ICS devices","Exploitation of internet-facing HMI web interfaces","Zero-day exploitation of edge appliances (VPN, firewall)","Direct manipulation of exposed PLCs via ICS protocols"],
+    controls:["Remove all direct internet access to OT devices","Continuous attack surface monitoring","OT asset discovery and exposure management","Firewall deny-all ingress to OT from internet","Regular external penetration testing of OT perimeter","Segment internet-facing systems in hardened DMZ","Monitor for OT assets appearing on Shodan/BinaryEdge","Patch internet-facing appliances within 24 hours of critical CVE"],
+    frameworks:["NIST 800-82 §5.3","IEC 62443-3-2","CISA Known Exploited Vulnerabilities","MITRE ATT&CK ICS T0886"]
+  },
+  {
+    id:"T13", name:"Physical access to OT assets",
+    cat:"Physical Security", sev:"High", zone:["Field","Control","Safety"],
+    icon:"🏭", color:"#FAEEDA",
+    desc:"Physical access to PLCs, RTUs, and safety systems enables direct manipulation, USB-based malware introduction, or hardware tampering. Field devices in remote locations are particularly vulnerable. Nation-state actors have demonstrated ability to reach physical infrastructure through combined cyber-physical attacks.",
+    ttps:["USB-based malware delivery to air-gapped systems","Physical modification of safety relay settings","Direct console access bypassing network controls","Hardware implant installation on ICS equipment"],
+    controls:["Physical access controls for control rooms and substations","CCTV monitoring of OT equipment areas","USB port disablement or strict device whitelisting","Physical tamper-evident seals on ICS cabinets","Visitor access management and escorted entry","Security guards and perimeter monitoring","Hardware asset management and integrity checks","Physical security audit programme"],
+    frameworks:["NIST 800-82 §6.2.9","IEC 62443-2-1 §4.3","MITRE ATT&CK ICS T0812","NERC CIP-006"]
+  },
+  {
+    id:"T14", name:"Lack of OT asset visibility",
+    cat:"Asset Management", sev:"Medium", zone:["Control","Field","Network"],
+    icon:"🔍", color:"#E1F5EE",
+    desc:"Many OT environments lack complete asset inventories. Passive discovery tools are required as active scanning can crash legacy OT devices. Unknown assets cannot be protected. Shadow OT — devices connected without IT/security knowledge — is a growing problem.",
+    ttps:["Compromise of unmanaged/undiscovered OT assets","Persistent access to forgotten legacy systems","Exploitation of shadow OT devices","Unmonitored vendor remote access paths"],
+    controls:["OT-specific passive asset discovery (Dragos, Claroty, Nozomi)","Manual asset inventory for offline systems","Regular network scanning (passive only) of OT zones","Configuration management database (CMDB) for OT","Network flow analysis to detect unknown devices","Onboarding process requiring security registration","Periodic physical asset walks","Decommission or isolate abandoned legacy systems"],
+    frameworks:["NIST 800-82 §6.2.1","IEC 62443-2-1 §4.2","MITRE ATT&CK ICS T0845","NIST CSF ID.AM"]
+  },
+  {
+    id:"T15", name:"Misconfiguration of OT systems",
+    cat:"Configuration Management", sev:"High", zone:["Control","Field","Safety"],
+    icon:"⚙️", color:"#FAEEDA",
+    desc:"Misconfigurations — open ports, disabled authentication, excessive permissions, incorrect firewall rules — are among the most exploited OT vulnerabilities. Many result from prioritising availability over security during commissioning.",
+    ttps:["Exploitation of open Modbus/DNP3 without authentication","Unauthorised access via misconfigured firewall rules","Abuse of over-permissioned service accounts","Exploitation of unnecessary services on OT hosts"],
+    controls:["OT hardening baselines (CIS Controls for ICS)","Automated configuration compliance checking","Change management process for all OT configuration changes","Periodic configuration audits of PLCs, firewalls, switches","Disable all unnecessary ports and services","Document and approve all firewall rule changes","Peer review for OT configuration changes","Configuration backup and version control"],
+    frameworks:["NIST 800-82 §6.2.3","IEC 62443-4-2","CIS Controls v8 IG2","MITRE ATT&CK ICS T0839"]
+  },
+  {
+    id:"T16", name:"Inadequate OT logging and monitoring",
+    cat:"Detection", sev:"Medium", zone:["Control","Network","Field"],
+    icon:"📊", color:"#E1F5EE",
+    desc:"Only 12% of organisations maintain adequate OT network monitoring. Without visibility, attacks persist undetected — average OT dwell time exceeds 200 days. Many OT protocols are unencrypted, making passive monitoring feasible but underutilised.",
+    ttps:["Long-duration APT campaigns exploiting monitoring gaps","Slow-and-low attacks below alert thresholds","Attackers disabling logging before action","Process manipulation undetected without physical-layer monitoring"],
+    controls:["Deploy OT-aware Network Detection and Response (NDR)","Centralised OT log aggregation (SIEM with OT parsers)","Baseline normal process values and alert on deviation","Integrate OT alerts into SOC workflows","Monitor ICS protocol commands (read vs write ratio)","Log all remote access sessions","Physical process monitoring (Level 0 sensors)","Regular log review and alert tuning"],
+    frameworks:["NIST 800-82 §6.2.7","IEC 62443-3-3 FR6","MITRE ATT&CK ICS T0878","NIST CSF DE.CM"]
+  },
+  {
+    id:"T17", name:"Weak OT incident response capability",
+    cat:"Incident Response", sev:"Medium", zone:["Control","Network","Safety"],
+    icon:"🚨", color:"#E1F5EE",
+    desc:"OT-specific incident response is immature in most organisations. IT IR playbooks are inadequate for OT — restarting a PLC or isolating a network segment has safety and production implications not found in IT environments. Only 19% of organisations feel fully prepared for OT security incidents.",
+    ttps:["Extended recovery time due to lack of OT IR plans","Incorrect response causing safety incidents","Loss of evidence due to improper OT forensics","Production downtime extended by poor coordination"],
+    controls:["OT-specific incident response plan with safety considerations","Regular tabletop exercises including OT scenarios","Defined OT IR roles (operations, engineering, security)","OT forensics capability (memory imaging, PLC backup)","Out-of-band communication plan for OT incidents","Pre-agreed safe-state procedures for OT isolation","Relationships with OT IR vendors (Dragos, Claroty)","Post-incident review process for OT events"],
+    frameworks:["NIST 800-82 §6.3","IEC 62443-2-1 §4.3","MITRE ATT&CK ICS","NIST CSF RS.RP"]
+  },
+  {
+    id:"T18", name:"Safety system (SIS) targeting",
+    cat:"Safety", sev:"Critical", zone:["Safety"],
+    icon:"⚠️", color:"#FCEBEB",
+    desc:"Safety Instrumented Systems (SIS) are the last line of defence preventing industrial accidents. TRITON/TRISIS malware specifically targeted Schneider Electric Triconex SIS controllers in 2017. A successful SIS compromise could cause loss of containment, explosion, or environmental catastrophe.",
+    ttps:["Direct targeting of Triconex, ABB, Emerson SIS controllers","Disabling safety functions to cause physical damage","Reprogramming safety logic setpoints","Combining SIS attack with process manipulation"],
+    controls:["Air-gap or extreme isolation of safety systems","Restrict all external access to SIS — no remote access","Read-only monitoring connections to SIS (never write paths)","Dual authorisation for all SIS changes","Regular SIS logic integrity verification","Separate SIS security assessment (LOPA/SIL review)","SIS-specific monitoring and alerting","Quarterly SIS cybersecurity audit"],
+    frameworks:["IEC 61511 (Safety lifecycle)","IEC 62443-3-3 FR3","NIST 800-82 §5.2","MITRE ATT&CK ICS T0838"]
+  },
+  {
+    id:"T19", name:"Cloud and IT dependency risks",
+    cat:"Architecture", sev:"High", zone:["Network","Control"],
+    icon:"☁️", color:"#FAEEDA",
+    desc:"OT systems increasingly depend on cloud-hosted services for scheduling, billing, control logic, and remote monitoring. When cloud or IT services are disrupted, OT processes can be indirectly impacted. 90% of OT physical disruptions in 2024 were caused indirectly via IT or cloud dependencies.",
+    ttps:["Cloud service outage disrupting OT scheduling","IT ransomware cascading to OT via shared services","Supply chain compromise of cloud-hosted SCADA","Data centre outage removing remote OT visibility"],
+    controls:["Identify and document all IT/cloud dependencies for OT","Design OT for standalone operation without IT","Local fallback modes for cloud-dependent OT functions","Test OT independence from IT regularly","Contractual SLAs for OT-critical cloud services","Redundant communication paths for OT","Business continuity plan covering cloud outage scenarios","Limit OT reliance on single cloud provider"],
+    frameworks:["NIST 800-82 §4","IEC 62443-2-1","NIST CSF ID.BE","CISA Cross-Sector Guidance"]
+  },
+  {
+    id:"T20", name:"Engineering workstation compromise",
+    cat:"Endpoint", sev:"High", zone:["Control","Network"],
+    icon:"💻", color:"#FAEEDA",
+    desc:"Engineering workstations (EWS) are high-value targets: they hold PLC programs, network diagrams, credentials, and have direct programming access to all field devices. Compromise of an EWS gives an attacker the same capability as a plant engineer.",
+    ttps:["Malware delivered via engineering software update","Spear-phishing targeting OT engineers","Exploitation of unpatched EWS operating system","Credential theft from EWS for wider OT access"],
+    controls:["Dedicated, hardened EWS with no internet access","Application allowlisting on all engineering workstations","Encrypt and control all EWS storage","Multi-factor authentication for EWS login","OT software update via secure, air-gapped process","Regular EWS patching on maintenance windows","Monitor EWS for anomalous PLC programming activity","Restrict EWS to specific OT subnets only"],
+    frameworks:["NIST 800-82 §6.2","IEC 62443-4-2","MITRE ATT&CK ICS T0853","NIST CSF PR.DS"]
+  },
+  {
+    id:"T21", name:"Wireless and IIoT device risks",
+    cat:"IIoT / Wireless", sev:"High", zone:["Field","Network"],
+    icon:"📡", color:"#FAEEDA",
+    desc:"IIoT sensors, wireless gateways, and connected field devices expand the OT attack surface. 70% of cyber incidents in manufacturing now involve IoT devices. Many IIoT devices have limited security capabilities, default credentials, and unencrypted protocols.",
+    ttps:["Rogue wireless access point insertion","Exploitation of default IIoT credentials","Man-in-the-middle on unencrypted wireless OT protocols","IIoT device compromise as pivot to OT network"],
+    controls:["IIoT device inventory and classification","Network microsegmentation for IIoT devices","Strong authentication for all wireless OT devices","Encrypt all wireless OT communications","Wireless intrusion detection system (WIDS)","Regular IIoT firmware update programme","Zero Trust access for IIoT to OT network","Disable unnecessary wireless interfaces on field devices"],
+    frameworks:["NIST 800-82 §5","IEC 62443-4-2","NIST CSF PR.AC","MITRE ATT&CK ICS T0860"]
+  },
+  {
+    id:"T22", name:"Inadequate OT backup and recovery",
+    cat:"Resilience", sev:"Medium", zone:["Control","Field","Safety"],
+    icon:"💾", color:"#E1F5EE",
+    desc:"Many OT environments lack tested, current backups of PLC programs, HMI configurations, historian databases, and network diagrams. Recovery without these artefacts can extend downtime by days or weeks. A backup that has never been tested is an assumption, not a capability.",
+    ttps:["Ransomware destroys backups before encryption","Attacker deletes PLC program backups","Recovery delayed by missing configuration artefacts","Outdated backups causing process anomalies on restore"],
+    controls:["Regular automated backup of all PLC programs and configs","Offline, immutable backup storage (3-2-1 rule)","Tested recovery procedures (quarterly minimum)","Documented restoration process for all OT systems","Backup integrity verification after each backup","Store backups in separate physical location","Recovery time objective (RTO) defined for each OT system","Include backup restoration in OT IR exercises"],
+    frameworks:["NIST 800-82 §6.2.7","IEC 62443-3-3 FR7","MITRE ATT&CK ICS T0895","NIST CSF RC.RP"]
+  }
+];
+
+const CONTROLS_CATS = [
+  {name:"Network Security", color:"#E6F1FB", dot:"#185FA5", controls:["Purdue Model / IT-OT DMZ segmentation","Unidirectional gateways","OT-specific firewalls (protocol-aware)","Network microsegmentation for OT zones","Wireless IDS (WIDS)","OT network traffic whitelisting"]},
+  {name:"Access & Identity", color:"#EEEDFE", dot:"#534AB7", controls:["MFA for all OT remote access","Zero Trust Network Access (ZTNA)","Privileged Access Management (PAM)","Role-based access control (RBAC)","Least privilege enforcement","Jump server / bastion host for OT","Vendor access time-limiting and recording"]},
+  {name:"Endpoint Hardening", color:"#FAEEDA", dot:"#854F0B", controls:["Application allowlisting on HMI/EWS","OT-specific endpoint detection","USB port controls","Disable unnecessary services/ports","PLC program integrity monitoring","Engineering workstation hardening"]},
+  {name:"Vulnerability Management", color:"#E1F5EE", dot:"#0F6E56", controls:["OT-specific vulnerability scanning (passive)","Compensating controls for unpatchable systems","Virtual patching via IDS/IPS","SBOM for OT software","ICS-CERT advisory monitoring","Vendor patch management programme"]},
+  {name:"Detection & Monitoring", color:"#FCEBEB", dot:"#A32D2D", controls:["Passive OT NDR (Dragos, Claroty, Nozomi)","SIEM with OT protocol parsers","Level 0 process value monitoring","OT behavioural baselining","ICS protocol command monitoring","Remote access session logging","OT SOC integration"]},
+  {name:"Incident Response", color:"#F1EFE8", dot:"#444441", controls:["OT-specific IR plan","OT tabletop exercises","OT forensics capability","Safe-state procedures for OT isolation","Out-of-band OT communication plan","Post-incident OT review process"]},
+  {name:"Physical Security", color:"#FAC775", dot:"#633806", controls:["Physical access controls for control rooms","Tamper-evident seals on ICS cabinets","CCTV monitoring of OT areas","USB/removable media controls","Visitor access management","Hardware asset integrity checks"]},
+  {name:"Resilience & Recovery", color:"#C0DD97", dot:"#27500A", controls:["Offline, tested OT backups (3-2-1)","Immutable backup repositories","Tested recovery procedures (quarterly)","Manual override / safe-state procedures","Redundant OT communication paths","Business continuity plan for OT outage"]},
+  {name:"Governance & Policy", color:"#B5D4F4", dot:"#0C447C", controls:["OT security policy and standards","Security awareness training for OT staff","Supplier security requirements (procurement)","OT risk assessment programme","Separation of duties for critical functions","OT cybersecurity ownership (CISO/OT lead)"]},
+];
+
+function sevClass(s){return s==="Critical"?"pill-crit":s==="High"?"pill-high":s==="Medium"?"pill-med":"pill-low"}
+function sevOrder(s){return{Critical:0,High:1,Medium:2,Low:3}[s]??4}
+
+function renderStats(){
+  const cats=[...new Set(THREATS.map(t=>t.cat))].sort();
+  const zones=[...new Set(THREATS.flatMap(t=>t.zone))].sort();
+  const fCat=document.getElementById('f-cat');
+  const fZone=document.getElementById('f-zone');
+  cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;fCat.appendChild(o)});
+  zones.forEach(z=>{const o=document.createElement('option');o.value=z;o.textContent=z;fZone.appendChild(o)});
+  const bySev={Critical:0,High:0,Medium:0,Low:0};
+  THREATS.forEach(t=>bySev[t.sev]++);
+  document.getElementById('stat-row').innerHTML=`
+    <div class="stat"><div class="stat-lbl">Total threats</div><div class="stat-val">${THREATS.length}</div></div>
+    <div class="stat"><div class="stat-lbl">Critical</div><div class="stat-val red">${bySev.Critical}</div></div>
+    <div class="stat"><div class="stat-lbl">High</div><div class="stat-val amber">${bySev.High}</div></div>
+    <div class="stat"><div class="stat-lbl">Medium / Low</div><div class="stat-val green">${bySev.Medium+bySev.Low}</div></div>
+    <div class="stat"><div class="stat-lbl">Threat categories</div><div class="stat-val blue">${cats.length}</div></div>`;
+}
+
+function renderThreats(){
+  const fCat=document.getElementById('f-cat').value;
+  const fSev=document.getElementById('f-sev').value;
+  const fZone=document.getElementById('f-zone').value;
+  const fSearch=document.getElementById('f-search').value.toLowerCase();
+  const filtered=THREATS.filter(t=>{
+    if(fCat&&t.cat!==fCat)return false;
+    if(fSev&&t.sev!==fSev)return false;
+    if(fZone&&!t.zone.includes(fZone))return false;
+    if(fSearch&&!t.name.toLowerCase().includes(fSearch)&&!t.desc.toLowerCase().includes(fSearch))return false;
+    return true;
+  }).sort((a,b)=>sevOrder(a.sev)-sevOrder(b.sev));
+
+  document.getElementById('threat-count-badge').textContent=`${filtered.length} threat${filtered.length!==1?'s':''}`;
+
+  document.getElementById('threat-grid').innerHTML=filtered.map(t=>`
+    <div class="threat-card" id="card-${t.id}">
+      <div class="threat-head" onclick="toggleCard('${t.id}')">
+        <div class="threat-icon" style="background:${t.color}">${t.icon}</div>
+        <div class="threat-meta">
+          <div class="threat-name">${t.name}</div>
+          <div class="threat-sub">${t.id} · ${t.zone.join(', ')} zone${t.zone.length>1?'s':''}</div>
+        </div>
+        <div class="threat-badges">
+          <span class="pill ${sevClass(t.sev)}">${t.sev}</span>
+          <span class="pill pill-cat">${t.cat}</span>
+          <span style="font-size:11px;color:var(--muted)">${t.controls.length} controls</span>
+        </div>
+        <div class="expand-icon">⌄</div>
+      </div>
+      <div class="threat-body">
+        <div class="body-desc">${t.desc}</div>
+        <div class="body-cols">
+          <div>
+            <div class="col-head red">Attack techniques (TTPs)</div>
+            <ul class="ctrl-list">${t.ttps.map(p=>`<li class="ctrl-item"><div class="ctrl-dot amber"></div>${p}</li>`).join('')}</ul>
+          </div>
+          <div>
+            <div class="col-head green">Recommended controls</div>
+            <ul class="ctrl-list">${t.controls.map(c=>`<li class="ctrl-item"><div class="ctrl-dot green"></div>${c}</li>`).join('')}</ul>
+          </div>
+        </div>
+        <div class="framework-row">
+          <span style="font-size:11px;color:var(--muted);margin-right:4px">Frameworks:</span>
+          ${t.frameworks.map(f=>{
+            const cls=f.includes('NIST 800')||f.includes('NIST CSF')||f.includes('NERC')?'fw-nist':f.includes('62443')||f.includes('61511')||f.includes('ISA')?'fw-iec':f.includes('CISA')?'fw-cisa':'fw-mitre';
+            return `<span class="fw-badge ${cls}">${f}</span>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function toggleCard(id){
+  const card=document.getElementById('card-'+id);
+  card.classList.toggle('open');
+}
+
+function renderMatrix(){
+  const zones=['Control','Field','Network','Safety'];
+  const controlGroups=['Network Security','Access & Identity','Endpoint Hardening','Vulnerability Mgmt','Detection & Monitoring','IR & Recovery','Physical Security'];
+  const sorted=[...THREATS].sort((a,b)=>sevOrder(a.sev)-sevOrder(b.sev));
+  let html=`<thead><tr><th>Threat</th><th>Sev</th>`;
+  controlGroups.forEach(g=>{html+=`<th>${g}</th>`});
+  html+=`</tr></thead><tbody>`;
+  sorted.forEach(t=>{
+    const ctrlMap={
+      'Network Security':['segmentation','DMZ','firewall','gateway','wireless','subnet','network','VLAN'],
+      'Access & Identity':['MFA','access','credential','privilege','RBAC','least-privilege','zero trust','ZTNA','PAM','password','authentication','jump server','vendor access'],
+      'Endpoint Hardening':['allowlist','endpoint','USB','hardening','workstation','application','disable','PLC program','port','service'],
+      'Vulnerability Mgmt':['patch','vulnerability','CVE','firmware','SBOM','advisory','compensating','virtual patch'],
+      'Detection & Monitoring':['monitor','detection','NDR','SIEM','baseline','log','SOC','anomaly','visibility','alert'],
+      'IR & Recovery':['incident','response','backup','recovery','exercise','tabletop','forensics','restore','plan'],
+      'Physical Security':['physical','CCTV','tamper','USB','visitor','hardware','seal','access control']
+    };
+    html+=`<tr><td style="font-size:12px;max-width:180px">${t.icon} ${t.name}</td><td><span class="pill ${sevClass(t.sev)}" style="font-size:10px">${t.sev}</span></td>`;
+    controlGroups.forEach(g=>{
+      const keywords=ctrlMap[g]||[];
+      const match=t.controls.some(c=>keywords.some(k=>c.toLowerCase().includes(k)));
+      html+=`<td><div class="dot-cell"><div class="ctrl-dot-sm ${match?'has':'none'}" title="${match?'Control applies':'Not mapped'}"></div></div></td>`;
+    });
+    html+=`</tr>`;
+  });
+  html+=`</tbody>`;
+  document.getElementById('matrix-tbl').innerHTML=html;
+}
+
+function renderControls(){
+  const fCat=document.getElementById('fc-cat').value;
+  const fSearch=document.getElementById('fc-search').value.toLowerCase();
+  let html='';
+  const filtered=CONTROLS_CATS.filter(c=>{
+    if(fCat&&c.name!==fCat)return false;
+    if(fSearch){
+      const matchName=c.name.toLowerCase().includes(fSearch);
+      const matchCtrl=c.controls.some(x=>x.toLowerCase().includes(fSearch));
+      if(!matchName&&!matchCtrl)return false;
+    }
+    return true;
+  });
+  filtered.forEach(cat=>{
+    const relevantThreats=THREATS.filter(t=>t.controls.some(c=>cat.controls.some(cc=>c.toLowerCase().includes(cc.split(' ')[0].toLowerCase()))));
+    html+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:${cat.color}20;border-bottom:1px solid var(--border)">
+        <div style="width:10px;height:10px;border-radius:50%;background:${cat.dot};flex-shrink:0"></div>
+        <span style="font-size:14px;font-weight:600;color:var(--text)">${cat.name}</span>
+        <span style="font-size:11px;color:var(--muted);margin-left:auto">${cat.controls.length} controls · mitigates ${relevantThreats.length} threat${relevantThreats.length!==1?'s':''}</span>
+      </div>
+      <div style="padding:14px 16px">
+        <ul class="ctrl-list">${cat.controls.map(c=>`<li class="ctrl-item"><div class="ctrl-dot" style="background:${cat.dot}"></div>${c}</li>`).join('')}</ul>
+        ${relevantThreats.length?`<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)"><span style="font-size:11px;color:var(--muted)">Addresses threats: </span>${relevantThreats.map(t=>`<span class="pill ${sevClass(t.sev)}" style="margin:2px">${t.id} ${t.name.split(' ').slice(0,3).join(' ')}…</span>`).join('')}</div>`:''}
+      </div>
+    </div>`;
+  });
+  document.getElementById('controls-grid').innerHTML=html||'<p style="color:var(--muted);font-size:13px">No controls match your filter.</p>';
+}
+
+function populateControlCatFilter(){
+  const fc=document.getElementById('fc-cat');
+  CONTROLS_CATS.forEach(c=>{const o=document.createElement('option');o.value=c.name;o.textContent=c.name;fc.appendChild(o)});
+}
+
+function showTab(name,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(name).classList.add('active');
+  if(name==='matrix')renderMatrix();
+  if(name==='controls')renderControls();
+}
+
+renderStats();
+renderThreats();
+populateControlCatFilter();
+</script>
+</body>
+</html>
